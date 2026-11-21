@@ -1,0 +1,302 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockWatch — Shopkeeper Login</title>
+<style>
+  :root{
+    --pink:#2a0f2e;
+    --paper:#f6f4ee;
+    --teal:#2f1246;
+    --teal-light:#6b1c5e;
+    --amber:#d98a1f;
+    --amber-soft:#f4e3c4;
+    --line:#d8d2c2;
+    --danger:#b3432b;
+    --font-head: Georgia, 'Times New Roman', serif;
+    --font-body: 'Segoe UI', Roboto, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:var(--font-body);
+    background:var(--paper);
+    color:var(--pink);
+    display:flex;
+    min-height:100vh;
+  }
+
+  .brand{
+    flex:1 1 46%;
+    background:var(--teal);
+    color:var(--paper);
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    padding:56px 48px;
+    position:relative;
+    overflow:hidden;
+  }
+  .brand::after{
+    content:"";
+    position:absolute;
+    right:-120px;
+    bottom:-120px;
+    width:340px;
+    height:340px;
+    border-radius:50%;
+    background:radial-gradient(circle, var(--teal-light) 0%, transparent 70%);
+    opacity:.6;
+  }
+  .brand-mark{
+    font-family:var(--font-head);
+    font-size:1.4rem;
+    letter-spacing:0.02em;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    z-index:1;
+  }
+  .brand-mark .dot{
+    width:10px;height:10px;border-radius:50%;
+    background:var(--amber);
+    box-shadow:0 0 0 4px rgba(217,138,31,0.25);
+  }
+  .brand-copy{ z-index:1; max-width:420px; }
+  .brand-copy h1{
+    font-family:var(--font-head);
+    font-size:2.6rem;
+    line-height:1.15;
+    font-weight:400;
+    margin:0 0 18px;
+  }
+  .brand-copy p{
+    font-size:1rem;
+    line-height:1.6;
+    color:#d7e6e2;
+    margin:0;
+  }
+  .brand-stats{
+    display:flex;
+    gap:32px;
+    z-index:1;
+    border-top:1px solid rgba(246,244,238,0.18);
+    padding-top:24px;
+  }
+  .brand-stats div strong{
+    display:block;
+    font-family:var(--font-head);
+    font-size:1.6rem;
+    color:var(--amber);
+  }
+  .brand-stats div span{
+    font-size:0.8rem;
+    color:#c3d6d1;
+  }
+
+  .panel{
+    flex:1 1 54%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:40px;
+  }
+  .card{
+    width:100%;
+    max-width:380px;
+  }
+  .card h2{
+    font-family:var(--font-head);
+    font-size:1.8rem;
+    font-weight:400;
+    margin:0 0 6px;
+    color:var(--pink#2a0f2e);
+  }
+  .card .sub{
+    color:#5c6b67;
+    font-size:0.92rem;
+    margin:0 0 32px;
+    line-height:1.5;
+  }
+
+  label{
+    display:block;
+    font-size:0.85rem;
+    color:var(--ink);
+    margin-bottom:6px;
+  }
+  .field{ margin-bottom:20px; }
+  input{
+    width:100%;
+    padding:12px 14px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:#fff;
+    font-size:0.95rem;
+    color:var(--ink);
+    outline:none;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  input:focus{
+    border-color:var(--teal-light);
+    box-shadow:0 0 0 3px rgba(28,107,94,0.15);
+  }
+
+  .row-between{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:0.82rem;
+    margin:-6px 0 26px;
+  }
+  .row-between a{ color:var(--teal-light); text-decoration:none; }
+  .row-between a:hover{ text-decoration:underline; }
+  .remember{ display:flex; align-items:center; gap:6px; color:#5c6b67; }
+  .remember input{ width:auto; }
+
+  button.submit{
+    width:100%;
+    padding:13px;
+    background:var(--teal);
+    color:var(--paper);
+    border:none;
+    border-radius:6px;
+    font-size:0.98rem;
+    cursor:pointer;
+    transition:background .15s ease;
+  }
+  button.submit:hover{ background:var(--teal-light); }
+
+  .msg{
+    margin-top:16px;
+    padding:10px 14px;
+    border-radius:6px;
+    font-size:0.85rem;
+    display:none;
+  }
+  .msg.error{
+    display:block;
+    background:#f7e4dd;
+    color:var(--danger);
+    border:1px solid #e8bdae;
+  }
+  .msg.success{
+    display:block;
+    background:var(--amber-soft);
+    color:#7a5310;
+    border:1px solid #e6c684;
+  }
+
+  .demo-note{
+    margin-top:28px;
+    font-size:0.78rem;
+    color:#8b968f;
+    border-top:1px solid var(--line);
+    padding-top:16px;
+    line-height:1.5;
+  }
+  .demo-note code{
+    background:#efece2;
+    padding:1px 6px;
+    border-radius:4px;
+    color:var(--ink);
+  }
+
+  @media (max-width: 820px){
+    body{ flex-direction:column; }
+    .brand{ padding:36px 28px; }
+    .brand-copy h1{ font-size:2rem; }
+    .brand-stats{ display:none; }
+    .panel{ padding:32px 24px; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="brand">
+    <div class="brand-mark"><span class="dot"></span> StockWatch</div>
+    <div class="brand-copy">
+      <h1>Sell it before it expires, not after.</h1>
+      <p>StockWatch tracks every product's expiry date and alerts shopkeepers well before it goes bad — so stock gets discounted, bundled, or cleared in time, and customers never receive an expired item.</p>
+    </div>
+    <div class="brand-stats">
+      <div><strong>30d</strong><span>early alert window</span></div>
+      <div><strong>FEFO</strong><span>sell first-expiry first</span></div>
+      <div><strong>0</strong><span>expired sales, that's the goal</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="card">
+      <h2>Shopkeeper login</h2>
+      <p class="sub">Sign in to view your inventory's expiry alerts and manage stock clearance.</p>
+
+      <form id="loginForm" novalidate>
+        <div class="field">
+          <label for="username">Shop ID / Username</label>
+          <input type="text" id="username" autocomplete="username" placeholder="e.g. shop_ramesh01">
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" autocomplete="current-password" placeholder="Enter your password">
+        </div>
+
+        <div class="row-between">
+          <label class="remember"><input type="checkbox" id="remember"> Remember me</label>
+          <a href="#" id="forgotLink">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="submit">Log in</button>
+        <div class="msg" id="msg"></div>
+      </form>
+
+      <div class="demo-note">
+        Demo mode (no backend connected yet): use <code>admin</code> / <code>admin123</code> to log in.
+        Replace the <code>checkCredentials()</code> function in the script with a real API call when you connect a backend.
+      </div>
+    </div>
+  </div>
+
+<script>
+  const form = document.getElementById('loginForm');
+  const msg = document.getElementById('msg');
+  const forgotLink = document.getElementById('forgotLink');
+
+  // Demo credential check — swap this out for a real API/database call.
+  function checkCredentials(username, password){
+    return username.trim() === 'admin' && password === 'admin123';
+  }
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+
+    if(!username.trim() || !password.trim()){
+      msg.textContent = 'Please enter both username and password.';
+      msg.className = 'msg error';
+      return;
+    }
+
+    if(checkCredentials(username, password)){
+      msg.textContent = 'Login successful. Redirecting to your dashboard...';
+      msg.className = 'msg success';
+       window.location.href = 'dashboard.html'; // hook up once dashboard page exists
+    } else {
+      msg.textContent = 'Incorrect username or password. Please try again.';
+      msg.className = 'msg error';
+    }
+  });
+
+  forgotLink.addEventListener('click', function(e){
+    e.preventDefault();
+    msg.textContent = 'Password reset flow not wired up yet — connect this to your backend\'s reset endpoint.';
+    msg.className = 'msg success';
+  });
+</script>
+
+</body>
+</html>

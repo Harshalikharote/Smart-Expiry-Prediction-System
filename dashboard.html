@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockWatch — Dashboard</title>
+<script>try{var t=localStorage.getItem('sw_theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<style>
+  :root{
+    --ink:#2c1b3d;
+    --paper:#faf5fb;
+    --teal:#6a3aa0;
+    --teal-light:#9a5fc9;
+    --amber:#ec6eae;
+    --amber-soft:#fbdcec;
+    --line:#e3d5ea;
+    --danger:#d94f8c;
+    --danger-soft:#fbe1ee;
+    --safe:#3a6fd8;
+    --safe-soft:#dce6fb;
+    --card:#fff;
+    --muted:#6f5a7d;
+    --head-bg:#fbf7fc;
+    --row-line:#ecdcef;
+    --amber-text:#8a1d5c;
+    --expired:#7a1650;
+    --expired-soft:#f3d4e4;
+    --font-head: Georgia, 'Times New Roman', serif;
+    --font-body: 'Segoe UI', Roboto, Arial, sans-serif;
+  }
+  [data-theme="dark"]{
+    --ink:#f1e8f7; --paper:#171021; --line:#3a2a4d; --card:#241833; --muted:#b9a6cc;
+    --head-bg:#2b1d3c; --row-line:#33244a; --teal:#7d4bb8; --teal-light:#a56fd6;
+    --amber-soft:#4a2540; --amber-text:#f5a9d2; --danger:#ff7fb0; --danger-soft:#4a2038;
+    --safe:#7aa2f0; --safe-soft:#1f3258; --expired:#ff9ccb; --expired-soft:#5a1a3e;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:var(--font-body);
+    background:var(--paper);
+    color:var(--ink);
+  }
+
+  header{
+    background:var(--teal);
+    color:var(--paper);
+    padding:20px 40px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .brand-mark{
+    font-family:var(--font-head);
+    font-size:1.3rem;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .brand-mark .dot{
+    width:9px;height:9px;border-radius:50%;
+    background:var(--amber);
+  }
+  header .shop-name{
+    font-size:0.85rem;
+    color:#ecd9f0;
+  }
+
+  main{
+    max-width:1100px;
+    margin:0 auto;
+    padding:36px 40px 60px;
+  }
+
+  h1{
+    font-family:var(--font-head);
+    font-weight:400;
+    font-size:1.7rem;
+    margin:0 0 6px;
+  }
+  .lead{
+    color:var(--muted);
+    font-size:0.92rem;
+    margin:0 0 28px;
+  }
+
+  .stats{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:16px;
+    margin-bottom:32px;
+  }
+  .stat{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:18px 20px;
+  }
+  .stat strong{
+    display:block;
+    font-family:var(--font-head);
+    font-size:1.7rem;
+  }
+  .stat span{
+    font-size:0.8rem;
+    color:var(--muted);
+  }
+  .stat.red strong{ color:var(--danger); }
+  .stat.amber strong{ color:var(--amber); }
+  .stat.green strong{ color:var(--safe); }
+  .stat.expired strong{ color:var(--expired); }
+
+  .toolbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:14px;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  .filters{ display:flex; gap:8px; }
+  .filters button{
+    border:1px solid var(--line);
+    background:var(--card);
+    padding:7px 14px;
+    border-radius:20px;
+    font-size:0.82rem;
+    cursor:pointer;
+    color:var(--ink);
+  }
+  .filters button.active{
+    background:var(--teal);
+    color:var(--paper);
+    border-color:var(--teal);
+  }
+  #search{
+    padding:8px 12px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-size:0.85rem;
+    width:220px;
+  }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:8px;
+    overflow:hidden;
+  }
+  thead th{
+    text-align:left;
+    font-size:0.78rem;
+    color:var(--muted);
+    font-weight:600;
+    padding:12px 16px;
+    border-bottom:1px solid var(--line);
+    background:var(--head-bg);
+  }
+  tbody td{
+    padding:13px 16px;
+    font-size:0.88rem;
+    border-bottom:1px solid var(--row-line);
+  }
+  tbody tr:last-child td{ border-bottom:none; }
+
+  .badge{
+    display:inline-block;
+    padding:3px 10px;
+    border-radius:12px;
+    font-size:0.76rem;
+  }
+  .badge.red{ background:var(--danger-soft); color:var(--danger); }
+  .badge.amber{ background:var(--amber-soft); color:var(--amber-text); }
+  .badge.green{ background:var(--safe-soft); color:var(--safe); }
+  .badge.expired{ background:var(--expired-soft); color:var(--expired); font-weight:600; }
+
+  .suggestion{ color:var(--muted); font-size:0.82rem; }
+
+  .empty{
+    text-align:center;
+    padding:40px;
+    color:var(--muted);
+    font-size:0.88rem;
+  }
+  #search{ background:var(--card); color:var(--ink); }
+  .theme-btn{ margin-left:12px; background:transparent; color:#fff; border:1px solid rgba(255,255,255,.5); padding:5px 12px; border-radius:16px; font-size:0.78rem; cursor:pointer; }
+  .theme-btn:hover{ background:rgba(255,255,255,.15); }
+  .alert-overlay{ position:fixed; inset:0; background:rgba(20,8,30,.6); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px; }
+  .alert-box{ background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:12px; max-width:460px; width:100%; max-height:80vh; overflow:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,.35); }
+  .alert-box h2{ margin:0 0 6px; font-size:1.2rem; color:var(--danger); }
+  .alert-box p{ margin:0 0 14px; font-size:0.88rem; color:var(--muted); }
+  .alert-box ul{ list-style:none; margin:0 0 18px; padding:0; }
+  .alert-box li{ padding:10px 12px; border-radius:8px; margin-bottom:8px; font-size:0.86rem; }
+  .alert-box li span{ font-size:0.8rem; }
+  .alert-box li.red{ background:var(--danger-soft); }
+  .alert-box li.expired{ background:var(--expired-soft); }
+  .alert-box button{ background:var(--teal); color:#fff; border:none; padding:10px 18px; border-radius:6px; cursor:pointer; width:100%; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand-mark"><span class="dot"></span> StockWatch</div>
+  <nav style="display:flex;align-items:center;gap:22px;">
+    <a href="dashboard.html" style="color:#fff;text-decoration:underline;font-size:0.85rem;">Dashboard</a>
+    <a href="product-management.html" style="color:#ecd9f0;text-decoration:none;font-size:0.85rem;">Manage Products</a>
+    <span class="shop-name">shop_ramesh01</span>
+    <button id="themeToggle" class="theme-btn" type="button"></button>
+  </nav>
+</header>
+
+<main>
+  <h1>Inventory overview</h1>
+  <p class="lead">Products sorted by nearest expiry first (FEFO) — clear red items today.</p>
+
+  <div class="stats">
+    <div class="stat expired"><strong id="countExpired">0</strong><span>Already expired</span></div>
+    <div class="stat red"><strong id="countRed">0</strong><span>Expiring within 7 days</span></div>
+    <div class="stat amber"><strong id="countAmber">0</strong><span>Expiring within 30 days</span></div>
+    <div class="stat green"><strong id="countGreen">0</strong><span>Safe stock</span></div>
+    <div class="stat"><strong id="countTotal">0</strong><span>Total products tracked</span></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="filters">
+      <button data-filter="all" class="active">All</button>
+      <button data-filter="expired">Expired</button>
+      <button data-filter="red">Expiring soon</button>
+      <button data-filter="amber">Watch list</button>
+      <button data-filter="green">Safe</button>
+    </div>
+    <input type="text" id="search" placeholder="Search product...">
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th>Batch no.</th>
+        <th>Stock qty</th>
+        <th>Expiry date</th>
+        <th>Days left</th>
+        <th>Status</th>
+        <th>Suggested action</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+  <div class="empty" id="emptyMsg" style="display:none;">No products match this filter.</div>
+</main>
+
+<script>
+  // Talks to the Node.js + Express + SQLite backend (see server.js).
+  // Make sure the backend is running first: cd backend && npm install && npm start
+  const API_BASE = 'http://localhost:3000/api/products';
+
+  // ---- Dark / light mode ----
+  const themeBtn = document.getElementById('themeToggle');
+  function refreshThemeBtn(){
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    themeBtn.textContent = dark ? '\u2600 Light' : '\u263E Dark';
+  }
+  themeBtn.addEventListener('click', () => {
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const next = dark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('sw_theme', next); }catch(e){}
+    refreshThemeBtn();
+  });
+  refreshThemeBtn();
+
+  // ---- Expiry popup (shown once per page load) ----
+  let alertShown = false;
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  function showExpiryAlert(list){
+    if(alertShown) return;
+    const urgent = list.filter(p => p.status === 'expired' || p.status === 'red');
+    if(urgent.length === 0) return;
+    alertShown = true;
+    const overlay = document.createElement('div');
+    overlay.className = 'alert-overlay';
+    const rows = urgent.map(p => {
+      const msg = p.daysLeft < 0 ? 'Expired ' + Math.abs(p.daysLeft) + ' day(s) ago'
+                : p.daysLeft === 0 ? 'Expires today'
+                : 'Expires in ' + p.daysLeft + ' day(s)';
+      return '<li class="' + p.status + '"><strong>' + esc(p.name) + '</strong> (Batch ' + esc(p.batch) + ', ' + p.qty + ' ' + esc(p.unit) + ')<br><span>' + msg + ' \u2014 ' + esc(p.expiryDate) + '</span></li>';
+    }).join('');
+    overlay.innerHTML = '<div class="alert-box"><h2>\u26A0 Expiry alert</h2><p>These products need action now:</p><ul>' + rows + '</ul><button type="button" id="alertClose">OK, got it</button></div>';
+    document.body.appendChild(overlay);
+    document.getElementById('alertClose').addEventListener('click', () => overlay.remove());
+  }
+
+  const today = new Date();
+  let enriched = [];
+  let activeFilter = 'all';
+  let searchTerm = '';
+
+  function daysLeft(expiryDate){
+    const exp = new Date(expiryDate);
+    const diff = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
+    return diff;
+  }
+
+  function statusFor(days){
+    if(days < 0) return 'expired';
+    if(days <= 7) return 'red';
+    if(days <= 30) return 'amber';
+    return 'green';
+  }
+
+  function suggestionFor(status, days){
+    if(status === 'expired') return 'EXPIRED. Remove from shelf now, do not sell.';
+    if(status === 'red') return 'Discount 30-40% or bundle now \u2014 clear before ' + Math.max(days,0) + ' day(s).';
+    if(status === 'amber') return 'Move to clearance shelf, offer 10-15% off.';
+    return 'No action needed yet.';
+  }
+
+  function badgeLabel(status){
+    if(status === 'expired') return 'Expired';
+    if(status === 'red') return 'Expiring soon';
+    if(status === 'amber') return 'Watch list';
+    return 'Safe';
+  }
+
+  async function loadProducts(){
+    try{
+      const res = await fetch(API_BASE);
+      if(!res.ok) throw new Error('Failed to load products');
+      const products = await res.json();
+
+      // Enrich products with computed fields, sorted nearest-expiry first (FEFO)
+      enriched = products.map(p => {
+        const dl = daysLeft(p.expiryDate);
+        const status = statusFor(dl);
+        return { ...p, daysLeft: dl, status, suggestion: suggestionFor(status, dl) };
+      }).sort((a, b) => a.daysLeft - b.daysLeft);
+    }catch(e){
+      console.error(e);
+      document.getElementById('emptyMsg').textContent =
+        'Could not connect to the backend. Make sure the server is running (npm start in the backend folder).';
+      enriched = [];
+    }
+    render();
+    showExpiryAlert(enriched);
+  }
+
+  function render(){
+    const tbody = document.getElementById('tableBody');
+    const emptyMsg = document.getElementById('emptyMsg');
+    tbody.innerHTML = '';
+
+    const filtered = enriched.filter(p => {
+      const matchesFilter = activeFilter === 'all' || p.status === activeFilter;
+      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesFilter && matchesSearch;
+    });
+
+    if(filtered.length === 0){
+      emptyMsg.style.display = 'block';
+    } else {
+      emptyMsg.style.display = 'none';
+      filtered.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${p.name}</td>
+          <td>${p.batch}</td>
+          <td>${p.qty} ${p.unit}</td>
+          <td>${p.expiryDate}</td>
+          <td>${p.daysLeft} day(s)</td>
+          <td><span class="badge ${p.status}">${badgeLabel(p.status)}</span></td>
+          <td class="suggestion">${p.suggestion}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.getElementById('countExpired').textContent = enriched.filter(p => p.status === 'expired').length;
+    document.getElementById('countRed').textContent = enriched.filter(p => p.status === 'red').length;
+    document.getElementById('countAmber').textContent = enriched.filter(p => p.status === 'amber').length;
+    document.getElementById('countGreen').textContent = enriched.filter(p => p.status === 'green').length;
+    document.getElementById('countTotal').textContent = enriched.length;
+  }
+
+  document.querySelectorAll('.filters button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filters button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilter = btn.dataset.filter;
+      render();
+    });
+  });
+
+  document.getElementById('search').addEventListener('input', e => {
+    searchTerm = e.target.value;
+    render();
+  });
+
+  loadProducts();
+</script>
+
+</body>
+</html>

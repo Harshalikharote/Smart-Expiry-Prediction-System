@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockWatch — Manage Products</title>
+<script>try{var t=localStorage.getItem('sw_theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<style>
+  :root{
+    --ink:#2c1b3d;
+    --paper:#faf5fb;
+    --teal:#6a3aa0;
+    --teal-light:#9a5fc9;
+    --amber:#ec6eae;
+    --amber-soft:#fbdcec;
+    --line:#e3d5ea;
+    --danger:#d94f8c;
+    --danger-soft:#fbe1ee;
+    --safe:#3a6fd8;
+    --safe-soft:#dce6fb;
+    --card:#fff;
+    --muted:#6f5a7d;
+    --head-bg:#fbf7fc;
+    --row-line:#ecdcef;
+    --amber-text:#8a1d5c;
+    --expired:#7a1650;
+    --expired-soft:#f3d4e4;
+    --font-head: Georgia, 'Times New Roman', serif;
+    --font-body: 'Segoe UI', Roboto, Arial, sans-serif;
+  }
+  [data-theme="dark"]{
+    --ink:#f1e8f7; --paper:#171021; --line:#3a2a4d; --card:#241833; --muted:#b9a6cc;
+    --head-bg:#2b1d3c; --row-line:#33244a; --teal:#7d4bb8; --teal-light:#a56fd6;
+    --amber-soft:#4a2540; --amber-text:#f5a9d2; --danger:#ff7fb0; --danger-soft:#4a2038;
+    --safe:#7aa2f0; --safe-soft:#1f3258; --expired:#ff9ccb; --expired-soft:#5a1a3e;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; font-family:var(--font-body); background:var(--paper); color:var(--ink); }
+
+  header{
+    background:var(--teal);
+    color:var(--paper);
+    padding:20px 40px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .brand-mark{
+    font-family:var(--font-head);
+    font-size:1.3rem;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .brand-mark .dot{ width:9px;height:9px;border-radius:50%; background:var(--amber); }
+  nav a{
+    color:#ecd9f0;
+    text-decoration:none;
+    font-size:0.85rem;
+    margin-left:22px;
+  }
+  nav a.active, nav a:hover{ color:#fff; text-decoration:underline; }
+
+  main{ max-width:1000px; margin:0 auto; padding:36px 40px 60px; }
+  h1{ font-family:var(--font-head); font-weight:400; font-size:1.6rem; margin:0 0 6px; }
+  .lead{ color:var(--muted); font-size:0.9rem; margin:0 0 28px; }
+
+  .form-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:24px 26px;
+    margin-bottom:32px;
+  }
+  .form-card h2{ font-size:1.1rem; font-weight:600; margin:0 0 18px; }
+  .grid{
+    display:grid;
+    grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;
+    gap:14px;
+    align-items:end;
+  }
+  .grid label{ display:block; font-size:0.78rem; color:var(--muted); margin-bottom:5px; }
+  .grid input, .grid select{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-size:0.88rem;
+    color:var(--ink);
+    background:var(--card);
+  }
+  .grid input:focus, .grid select:focus{
+    outline:none;
+    border-color:var(--teal-light);
+    box-shadow:0 0 0 3px rgba(154,95,201,0.15);
+  }
+  button.add-btn{
+    background:var(--teal);
+    color:#fff;
+    border:none;
+    padding:11px 18px;
+    border-radius:6px;
+    font-size:0.88rem;
+    cursor:pointer;
+    height:fit-content;
+  }
+  button.add-btn:hover{ background:var(--teal-light); }
+
+  .error-text{ color:var(--danger); font-size:0.8rem; margin-top:10px; display:none; }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:8px;
+    overflow:hidden;
+  }
+  thead th{
+    text-align:left;
+    font-size:0.78rem;
+    color:var(--muted);
+    font-weight:600;
+    padding:12px 16px;
+    border-bottom:1px solid var(--line);
+    background:var(--head-bg);
+  }
+  tbody td{ padding:12px 16px; font-size:0.86rem; border-bottom:1px solid var(--row-line); }
+  tbody tr:last-child td{ border-bottom:none; }
+
+  .badge{ display:inline-block; padding:3px 10px; border-radius:12px; font-size:0.75rem; }
+  .badge.red{ background:var(--danger-soft); color:var(--danger); }
+  .badge.amber{ background:var(--amber-soft); color:var(--amber-text); }
+  .badge.green{ background:var(--safe-soft); color:var(--safe); }
+  .badge.expired{ background:var(--expired-soft); color:var(--expired); font-weight:600; }
+
+  .row-actions button{
+    border:none;
+    background:none;
+    cursor:pointer;
+    font-size:0.8rem;
+    margin-right:10px;
+    padding:0;
+  }
+  .row-actions .edit-btn{ color:var(--teal); }
+  .row-actions .delete-btn{ color:var(--danger); }
+
+  .empty{ text-align:center; padding:36px; color:var(--muted); font-size:0.86rem; }
+
+  @media (max-width: 820px){
+    .grid{ grid-template-columns:1fr 1fr; }
+  }
+  #search{ background:var(--card); color:var(--ink); }
+  .theme-btn{ margin-left:12px; background:transparent; color:#fff; border:1px solid rgba(255,255,255,.5); padding:5px 12px; border-radius:16px; font-size:0.78rem; cursor:pointer; }
+  .theme-btn:hover{ background:rgba(255,255,255,.15); }
+  .alert-overlay{ position:fixed; inset:0; background:rgba(20,8,30,.6); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px; }
+  .alert-box{ background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:12px; max-width:460px; width:100%; max-height:80vh; overflow:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,.35); }
+  .alert-box h2{ margin:0 0 6px; font-size:1.2rem; color:var(--danger); }
+  .alert-box p{ margin:0 0 14px; font-size:0.88rem; color:var(--muted); }
+  .alert-box ul{ list-style:none; margin:0 0 18px; padding:0; }
+  .alert-box li{ padding:10px 12px; border-radius:8px; margin-bottom:8px; font-size:0.86rem; }
+  .alert-box li span{ font-size:0.8rem; }
+  .alert-box li.red{ background:var(--danger-soft); }
+  .alert-box li.expired{ background:var(--expired-soft); }
+  .alert-box button{ background:var(--teal); color:#fff; border:none; padding:10px 18px; border-radius:6px; cursor:pointer; width:100%; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand-mark"><span class="dot"></span> StockWatch</div>
+  <nav>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="product-management.html" class="active">Manage Products</a>
+    <button id="themeToggle" class="theme-btn" type="button"></button>
+  </nav>
+</header>
+
+<main>
+  <h1>Manage products</h1>
+  <p class="lead">Add new stock with its expiry date, or edit/remove existing entries. Changes reflect on your Dashboard automatically.</p>
+
+  <div class="form-card">
+    <h2 id="formTitle">Add new product</h2>
+    <div class="grid">
+      <div>
+        <label for="pName">Product name</label>
+        <input type="text" id="pName" placeholder="e.g. Chocolate Pastry">
+      </div>
+      <div>
+        <label for="pBatch">Batch no.</label>
+        <input type="text" id="pBatch" placeholder="e.g. PS-1187">
+      </div>
+      <div>
+        <label for="pQty">Quantity</label>
+        <input type="number" id="pQty" min="0" placeholder="0">
+      </div>
+      <div>
+        <label for="pUnit">Unit</label>
+        <select id="pUnit">
+          <option value="pcs">pcs</option>
+          <option value="kg">kg</option>
+          <option value="litre">litre</option>
+          <option value="packets">packets</option>
+        </select>
+      </div>
+      <div>
+        <label for="pExpiry">Expiry date</label>
+        <input type="date" id="pExpiry">
+      </div>
+      <button class="add-btn" id="saveBtn">Add product</button>
+    </div>
+    <div class="error-text" id="errorText">Please fill in all fields correctly.</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th>Batch no.</th>
+        <th>Qty</th>
+        <th>Expiry date</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+  <div class="empty" id="emptyMsg" style="display:none;">No products yet — add your first one above.</div>
+</main>
+
+<script>
+  // Talks to the Node.js + Express + SQLite backend (see server.js).
+  // Make sure the backend is running first: cd backend && npm install && npm start
+  const API_BASE = 'http://localhost:3000/api/products';
+
+  // ---- Dark / light mode ----
+  const themeBtn = document.getElementById('themeToggle');
+  function refreshThemeBtn(){
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    themeBtn.textContent = dark ? '\u2600 Light' : '\u263E Dark';
+  }
+  themeBtn.addEventListener('click', () => {
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const next = dark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('sw_theme', next); }catch(e){}
+    refreshThemeBtn();
+  });
+  refreshThemeBtn();
+
+  // ---- Expiry popup (shown once per page load) ----
+  let alertShown = false;
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  function showExpiryAlert(list){
+    if(alertShown) return;
+    const urgent = list.filter(p => p.status === 'expired' || p.status === 'red');
+    if(urgent.length === 0) return;
+    alertShown = true;
+    const overlay = document.createElement('div');
+    overlay.className = 'alert-overlay';
+    const rows = urgent.map(p => {
+      const msg = p.daysLeft < 0 ? 'Expired ' + Math.abs(p.daysLeft) + ' day(s) ago'
+                : p.daysLeft === 0 ? 'Expires today'
+                : 'Expires in ' + p.daysLeft + ' day(s)';
+      return '<li class="' + p.status + '"><strong>' + esc(p.name) + '</strong> (Batch ' + esc(p.batch) + ', ' + p.qty + ' ' + esc(p.unit) + ')<br><span>' + msg + ' \u2014 ' + esc(p.expiryDate) + '</span></li>';
+    }).join('');
+    overlay.innerHTML = '<div class="alert-box"><h2>\u26A0 Expiry alert</h2><p>These products need action now:</p><ul>' + rows + '</ul><button type="button" id="alertClose">OK, got it</button></div>';
+    document.body.appendChild(overlay);
+    document.getElementById('alertClose').addEventListener('click', () => overlay.remove());
+  }
+
+  let products = [];
+  let editingId = null;
+
+  async function loadProducts(){
+    try{
+      const res = await fetch(API_BASE);
+      if(!res.ok) throw new Error('Failed to load products');
+      products = await res.json();
+    }catch(e){
+      console.error(e);
+      document.getElementById('emptyMsg').textContent =
+        'Could not connect to the backend. Make sure the server is running (npm start in the backend folder).';
+      document.getElementById('emptyMsg').style.display = 'block';
+      products = [];
+    }
+    render();
+    
+  }
+
+  function daysLeft(expiryDate){
+    const diff = Math.ceil((new Date(expiryDate) - new Date()) / (1000 * 60 * 60 * 24));
+    return diff;
+  }
+  function statusFor(days){
+    if(days < 0) return 'expired';
+    if(days <= 7) return 'red';
+    if(days <= 30) return 'amber';
+    return 'green';
+  }
+  function badgeLabel(status){
+    if(status === 'expired') return 'Expired';
+    if(status === 'red') return 'Expiring soon';
+    if(status === 'amber') return 'Watch list';
+    return 'Safe';
+  }
+
+  function render(){
+    const tbody = document.getElementById('tableBody');
+    const emptyMsg = document.getElementById('emptyMsg');
+    tbody.innerHTML = '';
+
+    const sorted = [...products].sort((a, b) => daysLeft(a.expiryDate) - daysLeft(b.expiryDate));
+
+    if(sorted.length === 0){
+      emptyMsg.style.display = 'block';
+    } else {
+      emptyMsg.style.display = 'none';
+      sorted.forEach(p => {
+        const dl = daysLeft(p.expiryDate);
+        const status = statusFor(dl);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${p.name}</td>
+          <td>${p.batch}</td>
+          <td>${p.qty} ${p.unit}</td>
+          <td>${p.expiryDate}</td>
+          <td><span class="badge ${status}">${badgeLabel(status)}</span></td>
+          <td class="row-actions">
+            <button class="edit-btn" data-id="${p.id}">Edit</button>
+            <button class="delete-btn" data-id="${p.id}">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.addEventListener('click', () => startEdit(Number(btn.dataset.id)));
+    });
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', () => deleteProduct(Number(btn.dataset.id)));
+    });
+  }
+
+  function resetForm(){
+    document.getElementById('pName').value = '';
+    document.getElementById('pBatch').value = '';
+    document.getElementById('pQty').value = '';
+    document.getElementById('pUnit').value = 'pcs';
+    document.getElementById('pExpiry').value = '';
+    document.getElementById('formTitle').textContent = 'Add new product';
+    document.getElementById('saveBtn').textContent = 'Add product';
+    editingId = null;
+  }
+
+  function startEdit(id){
+    const p = products.find(x => x.id === id);
+    if(!p) return;
+    document.getElementById('pName').value = p.name;
+    document.getElementById('pBatch').value = p.batch;
+    document.getElementById('pQty').value = p.qty;
+    document.getElementById('pUnit').value = p.unit;
+    document.getElementById('pExpiry').value = p.expiryDate;
+    document.getElementById('formTitle').textContent = 'Edit product';
+    document.getElementById('saveBtn').textContent = 'Save changes';
+    editingId = id;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function deleteProduct(id){
+    try{
+      const res = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+      if(!res.ok) throw new Error('Delete failed');
+      await loadProducts();
+    }catch(e){
+      console.error(e);
+      alert('Could not delete product. Check that the backend server is running.');
+    }
+  }
+
+  document.getElementById('saveBtn').addEventListener('click', async () => {
+    const name = document.getElementById('pName').value.trim();
+    const batch = document.getElementById('pBatch').value.trim();
+    const qty = Number(document.getElementById('pQty').value);
+    const unit = document.getElementById('pUnit').value;
+    const expiryDate = document.getElementById('pExpiry').value;
+    const errorText = document.getElementById('errorText');
+
+    if(!name || !batch || !qty || qty <= 0 || !expiryDate){
+      errorText.style.display = 'block';
+      return;
+    }
+    errorText.style.display = 'none';
+
+    const payload = { name, batch, qty, unit, expiryDate };
+
+    try{
+      let res;
+      if(editingId !== null){
+        res = await fetch(`${API_BASE}/${editingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        res = await fetch(API_BASE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
+      if(!res.ok) throw new Error('Save failed');
+      resetForm();
+      await loadProducts();
+    }catch(e){
+      console.error(e);
+      alert('Could not save product. Check that the backend server is running.');
+    }
+  });
+
+  loadProducts();
+</script>
+
+</body>
+</html>
