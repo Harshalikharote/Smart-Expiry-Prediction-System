@@ -179,7 +179,7 @@ async function loadChart(type) {
     try {
 
         const response = await fetch(
-            `http://localhost:3000/api/analytics/${type}`
+            `/api/analytics/${type}`
         );
 
         if (!response.ok) {

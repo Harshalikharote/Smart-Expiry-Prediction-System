@@ -177,7 +177,7 @@ async function downloadReport(type) {
     try {
 
         const response = await fetch(
-            `http://localhost:3000/api/reports/${type}`
+            `/api/reports/${type}`
         );
 
         if (!response.ok) {
