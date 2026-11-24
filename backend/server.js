@@ -1,4 +1,3 @@
-
 // Smart Expiry Prediction System
 // Backend: Node.js + Express + SQLite
 
@@ -9,12 +8,15 @@ const path = require('path');
 const PDFDocument = require('pdfkit');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-const path = require('path');
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, '../dashboard.html')));
+app.use(express.static(path.join(__dirname, '../')));
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard.html'));
+});
 
 // DATABASE
 const db = new sqlite3.Database(
