@@ -1,0 +1,215 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Reports - Smart Expiry Prediction System</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #f7f3fc;
+    color: #333;
+    padding: 20px;
+}
+
+header {
+    background: linear-gradient(135deg, #663399, #9b59b6);
+    color: white;
+    padding: 22px;
+    text-align: center;
+    border-radius: 12px;
+    margin-bottom: 30px;
+}
+
+header h1 {
+    margin-bottom: 15px;
+}
+
+nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 10px 13px;
+    border-radius: 8px;
+    transition: 0.3s;
+}
+
+nav a:hover,
+nav a.active {
+    background: rgba(255,255,255,0.22);
+}
+
+.container {
+    max-width: 650px;
+    margin: 40px auto;
+    background: white;
+    padding: 35px;
+    border-radius: 14px;
+    box-shadow: 0 4px 15px rgba(70,30,100,0.10);
+    text-align: center;
+}
+
+.container h2 {
+    color: #663399;
+    margin-bottom: 10px;
+}
+
+.container h3 {
+    color: #777;
+    font-weight: normal;
+    margin-bottom: 30px;
+}
+
+.report-btn {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    margin: 15px 0;
+    background: linear-gradient(135deg, #663399, #9b59b6);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.report-btn:hover {
+    background: #51277d;
+    transform: translateY(-2px);
+}
+
+#message {
+    font-weight: bold;
+    margin-top: 20px;
+    line-height: 1.5;
+}
+
+@media(max-width:600px) {
+    body {
+        padding: 12px;
+    }
+
+    header {
+        padding: 18px 10px;
+    }
+
+    nav {
+        gap: 5px;
+    }
+
+    nav a {
+        font-size: 13px;
+        padding: 8px;
+    }
+
+    .container {
+        padding: 22px;
+        margin-top: 25px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>Smart Expiry Prediction System</h1>
+
+    <nav>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="product-management.html">Manage Products</a>
+        <a href="sales.html">Sales Entry</a>
+        <a href="sales-analytics.html">Sales Analytics</a>
+        <a href="reports.html" class="active">PDF Reports</a>
+    </nav>
+</header>
+
+<div class="container">
+
+    <h2>PDF Reports</h2>
+
+    <h3>Download and Manage Your Reports</h3>
+
+    <button class="report-btn" onclick="downloadReport('stock')">
+        Download Stock Report
+    </button>
+
+    <button class="report-btn" onclick="downloadReport('expired')">
+        Download Expired Products Report
+    </button>
+
+    <button class="report-btn" onclick="downloadReport('sales')">
+        Download Sales Report
+    </button>
+
+    <p id="message"></p>
+
+</div>
+
+<script>
+async function downloadReport(type) {
+
+    const message = document.getElementById('message');
+
+    message.style.color = '#663399';
+    message.textContent = 'Generating PDF...';
+
+    try {
+
+        const response = await fetch(
+            `http://localhost:3000/api/reports/${type}`
+        );
+
+        if (!response.ok) {
+            throw new Error('Report generation failed.');
+        }
+
+        const blob = await response.blob();
+
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+
+        link.href = url;
+        link.download = type + '-report.pdf';
+
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        URL.revokeObjectURL(url);
+
+        message.style.color = 'green';
+        message.textContent = 'PDF downloaded successfully!';
+
+    } catch (error) {
+
+        message.style.color = 'red';
+        message.textContent = error.message;
+
+    }
+}
+</script>
+
+</body>
+</html>

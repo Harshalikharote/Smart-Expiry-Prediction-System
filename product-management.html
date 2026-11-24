@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StockWatch — Manage Products</title>
+<title>Smart Expiry Prediction System — Manage Products</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>try{var t=localStorage.getItem('sw_theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <style>
   :root{
@@ -163,15 +164,38 @@
   .alert-box li.red{ background:var(--danger-soft); }
   .alert-box li.expired{ background:var(--expired-soft); }
   .alert-box button{ background:var(--teal); color:#fff; border:none; padding:10px 18px; border-radius:6px; cursor:pointer; width:100%; }
+
+  /* ---- Scan & add ---- */
+  .scan-grid{ display:grid; grid-template-columns:1.2fr 1fr 1fr auto; gap:14px; align-items:end; }
+  .scan-grid label, .scan-extra label{ display:block; font-size:0.78rem; color:var(--muted); margin-bottom:5px; }
+  .scan-grid input, .scan-grid select, .scan-extra input{
+    width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:6px;
+    font-size:0.88rem; color:var(--ink); background:var(--card);
+  }
+  .scan-extra{ margin-top:14px; max-width:340px; }
+  #reader{ width:100%; max-width:380px; margin-top:16px; display:none; border-radius:8px; overflow:hidden; }
+  .scan-msg{ font-size:0.85rem; color:var(--muted); margin:12px 0; min-height:1.2em; }
+  .scan-msg.ok{ color:var(--safe); } .scan-msg.warn{ color:var(--danger); }
+  #pendingTable input{ padding:6px 8px; border:1px solid var(--line); border-radius:6px; font-size:0.84rem; background:var(--card); color:var(--ink); width:100%; }
+  #pendingTable .qty-cell{ white-space:nowrap; }
+  #pendingTable .qty-cell button{ width:26px; height:26px; border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:6px; cursor:pointer; }
+  #pendingTable .qty-cell span{ display:inline-block; min-width:28px; text-align:center; }
+  .pending-actions{ display:flex; gap:12px; align-items:center; margin-top:14px; }
+  button.ghost-btn{ background:transparent; color:var(--danger); border:1px solid var(--line); padding:10px 16px; border-radius:6px; cursor:pointer; font-size:0.86rem; }
+  @media (max-width: 820px){ .scan-grid{ grid-template-columns:1fr 1fr; } }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="brand-mark"><span class="dot"></span> StockWatch</div>
+  <div class="brand-mark"><span class="dot"></span> Smart Expiry Prediction System</div>
   <nav>
     <a href="dashboard.html">Dashboard</a>
     <a href="product-management.html" class="active">Manage Products</a>
+     <a href="sales.html">Sales Entry</a>
+    <a href="sales-analytics.html">Sales Analytics</a>
+    <a href="reports.html">PDF Reports</a>
+
     <button id="themeToggle" class="theme-btn" type="button"></button>
   </nav>
 </header>
@@ -213,6 +237,50 @@
     <div class="error-text" id="errorText">Please fill in all fields correctly.</div>
   </div>
 
+  <div class="form-card" id="scanCard">
+    <h2>Scan &amp; add products</h2>
+    <div class="scan-grid">
+      <div>
+        <label for="sExpiry">Expiry date</label>
+        <input type="date" id="sExpiry">
+      </div>
+      <div>
+        <label for="sBatch">Batch no. (optional)</label>
+        <input type="text" id="sBatch" placeholder="auto">
+      </div>
+      <div>
+        <label for="sUnit">Unit</label>
+        <select id="sUnit">
+          <option value="pcs">pcs</option>
+          <option value="kg">kg</option>
+          <option value="litre">litre</option>
+          <option value="packets">packets</option>
+        </select>
+      </div>
+      <button class="add-btn" id="scanToggle" type="button">&#128247; Start scanning</button>
+    </div>
+    <div id="reader"></div>
+    <div class="scan-extra">
+      <label for="manualCode">Barcode (type or use a USB scanner)</label>
+      <div style="display:flex;gap:10px;">
+        <input type="text" id="manualCode" inputmode="numeric" placeholder="e.g. 8901058852738">
+        <button class="add-btn" id="manualAdd" type="button">Add</button>
+      </div>
+    </div>
+    <p class="scan-msg" id="scanMsg"></p>
+
+    <table id="pendingTable" style="display:none;">
+      <thead>
+        <tr><th>Product</th><th>Qty</th><th>Expiry date</th><th>Batch</th><th></th></tr>
+      </thead>
+      <tbody id="pendingBody"></tbody>
+    </table>
+    <div class="pending-actions" id="pendingActions" style="display:none;">
+      <button class="add-btn" id="saveAllBtn" type="button">Save all products</button>
+      <button class="ghost-btn" id="clearAllBtn" type="button">Clear list</button>
+    </div>
+  </div>
+
   <table>
     <thead>
       <tr>
@@ -232,8 +300,7 @@
 <script>
   // Talks to the Node.js + Express + SQLite backend (see server.js).
   // Make sure the backend is running first: cd backend && npm install && npm start
-  const API_BASE = 'https://smart-expiry-prediction-system.onrender.com/api/products';
-
+ const API_BASE = 'http://localhost:3000/api/products';
   // ---- Dark / light mode ----
   const themeBtn = document.getElementById('themeToggle');
   function refreshThemeBtn(){
@@ -419,6 +486,170 @@
       alert('Could not save product. Check that the backend server is running.');
     }
   });
+
+  // =====================================================
+  //  SCAN & ADD (fast mode)
+  //  - Expiry date is set once, applies only to NEW scans.
+  //  - Every row remembers the date it was scanned with, so older rows never change.
+  //  - Same product + same date scanned again => qty goes up by 1.
+  // =====================================================
+  const API_ROOT = API_BASE.replace(/\/products$/, '');   // https://.../api
+  let pending = [];            // {barcode, name, qty, unit, expiryDate, batch}
+  let scanner = null;
+  let lastCode = '', lastTime = 0;
+
+  const $ = id => document.getElementById(id);
+  function setScanMsg(text, kind){ const m = $('scanMsg'); m.textContent = text; m.className = 'scan-msg' + (kind ? ' ' + kind : ''); }
+  function autoBatch(){ return 'SCAN-' + new Date().toISOString().slice(0,10).replace(/-/g,''); }
+  function beep(){
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator(); o.frequency.value = 880; o.connect(ctx.destination);
+      o.start(); setTimeout(() => { o.stop(); ctx.close(); }, 90);
+      if(navigator.vibrate) navigator.vibrate(60);
+    }catch(e){}
+  }
+
+  async function handleCode(raw){
+    const code = String(raw).replace(/\D/g, '');
+    if(code.length < 6) return;
+
+    const expiryDate = $('sExpiry').value;
+    if(!expiryDate){ setScanMsg('Select an expiry date first.', 'warn'); return; }
+
+    // camera sends the same code many times per second: ignore repeats within 2.5 s
+    // (key includes the date, so changing the date and scanning again always counts)
+    const key = code + '|' + expiryDate;
+    const now = Date.now();
+    if(key === lastCode && now - lastTime < 2500){ lastTime = now; return; }
+    lastCode = key; lastTime = now;
+
+    const unit = $('sUnit').value;
+    const batch = $('sBatch').value.trim() || autoBatch();
+    beep();
+
+    // same product + same date + same batch + same unit => just add 1 to qty
+    const existing = pending.find(r => r.barcode === code && r.expiryDate === expiryDate && r.batch === batch && r.unit === unit);
+    if(existing){
+      existing.qty += 1;
+      renderPending();
+      setScanMsg('+1 ' + (existing.name || code) + ' (total ' + existing.qty + ')', 'ok');
+      return;
+    }
+
+    const row = { barcode: code, name: '', qty: 1, unit, expiryDate, batch, loading: true };
+    pending.push(row);
+    renderPending();
+    setScanMsg('');
+
+    try{
+      const res = await fetch(API_ROOT + '/lookup/' + code);
+      const p = await res.json();
+      if(p.found){
+        row.name = p.name;
+        if(p.unit && p.unit !== unit) row.unit = p.unit;
+        setScanMsg('\u2705 ' + p.name, 'ok');
+      } else {
+        setScanMsg('Product not found. Enter the name in the list below.', 'warn');
+      }
+    }catch(e){
+      setScanMsg('Lookup failed. Enter the name manually.', 'warn');
+    }
+    row.loading = false;
+    renderPending();
+  }
+
+  function renderPending(){
+    const body = $('pendingBody');
+    body.innerHTML = '';
+    $('pendingTable').style.display = pending.length ? '' : 'none';
+    $('pendingActions').style.display = pending.length ? 'flex' : 'none';
+    pending.forEach((r, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="text" data-f="name" data-i="${i}" value="${esc(r.name)}" placeholder="${r.loading ? 'Searching...' : 'Enter product name'}"></td>
+        <td class="qty-cell"><button type="button" data-act="dec" data-i="${i}">-</button><span>${r.qty}</span><button type="button" data-act="inc" data-i="${i}">+</button></td>
+        <td><input type="date" data-f="expiryDate" data-i="${i}" value="${esc(r.expiryDate)}"></td>
+        <td><input type="text" data-f="batch" data-i="${i}" value="${esc(r.batch)}"></td>
+        <td><button type="button" class="delete-btn" style="border:none;background:none;color:var(--danger);cursor:pointer;" data-act="del" data-i="${i}">Remove</button></td>`;
+      body.appendChild(tr);
+    });
+  }
+
+  // edits inside the pending list (no re-render on typing, so the cursor never jumps)
+  $('pendingBody').addEventListener('change', e => {
+    const f = e.target.dataset.f, i = Number(e.target.dataset.i);
+    if(f && pending[i]) pending[i][f] = e.target.value.trim();
+  });
+  $('pendingBody').addEventListener('click', e => {
+    const act = e.target.dataset.act, i = Number(e.target.dataset.i);
+    if(!act || !pending[i]) return;
+    if(act === 'inc') pending[i].qty += 1;
+    if(act === 'dec') pending[i].qty = Math.max(1, pending[i].qty - 1);
+    if(act === 'del') pending.splice(i, 1);
+    renderPending();
+  });
+
+  $('clearAllBtn').addEventListener('click', () => { pending = []; renderPending(); setScanMsg(''); });
+
+  $('saveAllBtn').addEventListener('click', async () => {
+    const bad = pending.find(r => !r.name || !r.expiryDate || !r.batch || r.qty <= 0);
+    if(bad){ setScanMsg('Each row needs a name, quantity and expiry date.', 'warn'); return; }
+    $('saveAllBtn').disabled = true;
+    const failed = [];
+    for(const r of pending){
+      try{
+        const res = await fetch(API_BASE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: r.name, batch: r.batch, qty: r.qty, unit: r.unit, expiryDate: r.expiryDate, barcode: r.barcode })
+        });
+        if(!res.ok) throw new Error('Save failed');
+      }catch(e){ failed.push(r); }
+    }
+    pending = failed;                       // keep only the ones that failed, so nothing is lost
+    renderPending();
+    $('saveAllBtn').disabled = false;
+    setScanMsg(failed.length ? failed.length + ' product(s) could not be saved. Try again.' : '\u2705 All products saved.', failed.length ? 'warn' : 'ok');
+    await loadProducts();
+  });
+
+  // camera (stays ON so you can scan many packets in a row)
+  async function startScanner(){
+    if(typeof Html5Qrcode === 'undefined'){ setScanMsg('Scanner could not load. Check your internet connection.', 'warn'); return; }
+    $('reader').style.display = 'block';
+    const F = Html5QrcodeSupportedFormats;
+    scanner = new Html5Qrcode('reader', { formatsToSupport: [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128], verbose: false });
+    try{
+      await scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 260, height: 120 } }, handleCode, () => {});
+      $('scanToggle').textContent = '\u23F9 Stop scanning';
+      setScanMsg('');
+    }catch(e){
+      $('reader').style.display = 'none'; scanner = null;
+      setScanMsg('Camera could not start. Allow camera access (HTTPS is required).', 'warn');
+    }
+  }
+  async function stopScanner(){
+    if(scanner){ try{ await scanner.stop(); await scanner.clear(); }catch(e){} scanner = null; }
+    $('reader').style.display = 'none';
+    $('scanToggle').textContent = '\uD83D\uDCF7 Start scanning';
+  }
+  $('scanToggle').addEventListener('click', () => scanner ? stopScanner() : startScanner());
+
+  // typed barcode: Add button, or Enter key (USB barcode scanners press Enter automatically)
+  function addTyped(){
+    const box = $('manualCode');
+    const v = box.value;
+    box.value = '';
+    lastCode = '';                          // typed entries should always count
+    handleCode(v);
+    box.focus();
+  }
+  $('manualAdd').addEventListener('click', addTyped);
+  $('manualCode').addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ e.preventDefault(); addTyped(); }
+  });
+
 
   loadProducts();
 </script>

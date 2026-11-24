@@ -1,0 +1,259 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Entry - Smart Expiry Prediction System</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #f7f3fc;
+    color: #333;
+    padding: 20px;
+}
+
+header {
+    background: linear-gradient(135deg, #663399, #9b59b6);
+    color: white;
+    padding: 22px;
+    text-align: center;
+    border-radius: 12px;
+    margin-bottom: 30px;
+}
+
+header h1 {
+    margin-bottom: 15px;
+}
+
+nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 10px 13px;
+    border-radius: 8px;
+    transition: 0.3s;
+}
+
+nav a:hover,
+nav a.active {
+    background: rgba(255,255,255,0.22);
+}
+
+.container {
+    max-width: 500px;
+    margin: 40px auto;
+    background: white;
+    padding: 30px;
+    border-radius: 14px;
+    box-shadow: 0 4px 15px rgba(70,30,100,0.10);
+}
+
+.container h2 {
+    color: #663399;
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+label {
+    display: block;
+    font-weight: 600;
+    margin-top: 15px;
+    margin-bottom: 7px;
+}
+
+input, select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #d7c9e6;
+    border-radius: 8px;
+    font-size: 15px;
+    outline: none;
+    background: white;
+}
+
+input:focus, select:focus {
+    border-color: #8e44ad;
+    box-shadow: 0 0 5px rgba(142,68,173,0.2);
+}
+
+button {
+    width: 100%;
+    padding: 13px;
+    margin-top: 22px;
+    background: linear-gradient(135deg, #663399, #9b59b6);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+button:hover {
+    background: #51277d;
+}
+
+#message {
+    font-weight: bold;
+    text-align: center;
+    margin-top: 18px;
+    line-height: 1.5;
+}
+
+@media(max-width:600px) {
+    body {
+        padding: 12px;
+    }
+
+    header {
+        padding: 18px 10px;
+    }
+
+    nav {
+        gap: 5px;
+    }
+
+    nav a {
+        font-size: 13px;
+        padding: 8px;
+    }
+
+    .container {
+        padding: 22px;
+        margin-top: 25px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>Smart Expiry Prediction System</h1>
+
+    <nav>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="product-management.html">Manage Products</a>
+        <a href="sales.html" class="active">Sales Entry</a>
+        <a href="sales-analytics.html">Sales Analytics</a>
+        <a href="reports.html">PDF Reports</a>
+    </nav>
+</header>
+
+<div class="container">
+
+    <h2>Sales Entry</h2>
+
+    <label>Select Product</label>
+    <select id="product">
+        <option value="">Loading Products...</option>
+    </select>
+
+    <label>Quantity Sold</label>
+    <input
+        type="number"
+        id="quantity"
+        min="1"
+        placeholder="Enter quantity"
+    >
+
+    <button onclick="recordSale()">Record Sale</button>
+
+    <p id="message"></p>
+
+</div>
+
+<script>
+const API = 'http://localhost:3000';
+
+async function loadProducts() {
+    try {
+        const response = await fetch(API + '/api/products');
+
+        if (!response.ok) {
+            throw new Error('Unable to load products.');
+        }
+
+        const products = await response.json();
+
+        const select = document.getElementById('product');
+        select.innerHTML = '<option value="">Select Product</option>';
+
+        products.forEach(p => {
+            const option = document.createElement('option');
+            option.value = p.id;
+            option.textContent = `${p.name} - Stock: ${p.qty} ${p.unit}`;
+            select.appendChild(option);
+        });
+
+    } catch (error) {
+        document.getElementById('message').textContent =
+            'Unable to load products. Check backend.';
+    }
+}
+
+async function recordSale() {
+    const productId = document.getElementById('product').value;
+    const quantitySold = Number(document.getElementById('quantity').value);
+    const message = document.getElementById('message');
+
+    if (!productId || !Number.isInteger(quantitySold) || quantitySold <= 0) {
+        message.style.color = 'red';
+        message.textContent = 'Please select product and valid quantity.';
+        return;
+    }
+
+    try {
+        const response = await fetch(API + '/api/sales', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                productId,
+                quantitySold
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || 'Unable to record sale.');
+        }
+
+        message.style.color = 'green';
+        message.textContent = 'Sale recorded successfully!';
+
+        document.getElementById('quantity').value = '';
+
+        await loadProducts();
+
+    } catch (error) {
+        message.style.color = 'red';
+        message.textContent = error.message;
+    }
+}
+
+loadProducts();
+</script>
+
+</body>
+</html>
